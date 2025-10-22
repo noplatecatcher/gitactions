@@ -1,16 +1,67 @@
-            - name: Deploy GitHub Pages site
-  uses: actions/deploy-pages@v4.0.5
-  with:
-    # GitHub token
-    token: # default is ${{ github.token }}
-    # Time in milliseconds after which to timeout and cancel the deployment (default: 10 minutes)
-    timeout: # optional, default is 600000
-    # Maximum number of status report errors before cancelling a deployment (default: 10)
-    error_count: # optional, default is 10
-    # Time in milliseconds between two deployment status report (default: 5 seconds)
-    reporting_interval: # optional, default is 5000
-    # Name of the artifact to deploy
-    artifact_name: # optional, default is github-pages
-    # Is this attempting to deploy a pull request as a GitHub Pages preview site? (NOTE: This feature is only in alpha currently and is not available to the public!)
-    preview: # optional, default is false
+# 部署到 GitHub Pages 的简单工作流
+name: Deploy to GitHub Pages
+
+on:
+  # 当有推送(push)到 'main' 分支时触发
+  push:
+    branches:
+      - main
+      
+  # 允许你从 "Actions" 选项卡手动运行此工作流
+  workflow_dispatch:
+
+# 设置 GITHUB_TOKEN 的权限，以允许部署到 GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 只允许一个并发部署，会中止正在进行中的旧部署
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  # 构建作业
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      # 准备要部署的产物 (Artifact)
+      - name: Setup Build Artifact
+        run: |
+          # 创建一个目录来存放你的网站文件
+          mkdir -p _site
+          # 把你的 HTML 文件复制进去
+          cp index.html _site/
           
+          # ------------------------------------------------------------------
+          # 注意:
+          # 如果你还有其他文件 (例如 style.css, images/ 文件夹), 
+          # 你也需要把它们复制到 _site 目录中:
+          # cp style.css _site/
+          # cp -r images _site/
+          # ------------------------------------------------------------------
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+        
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # 从我们刚刚创建的 _site 目录上传
+          path: '_site'
+
+  # 部署作业
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build # 依赖 'build' 作业
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
