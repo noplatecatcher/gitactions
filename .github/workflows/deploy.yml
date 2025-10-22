@@ -36,7 +36,7 @@ jobs:
           mkdir -p _site
           # 把你的 HTML 文件复制进去
           cp index.html _site/
-          cp images.jpg _site/
+          cp -r images _site/
           
           # ------------------------------------------------------------------
           # 注意:
